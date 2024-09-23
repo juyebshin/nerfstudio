@@ -148,6 +148,36 @@
         "--include_mono_prior=False",
         "--auto-orient=True"
       ]
+    },
+    {
+      "name": "Python: Splatfacto on Giannini-Hall",
+      "type": "python",
+      "request": "launch",
+      "program": "nerfstudio/scripts/train.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": { "CUDA_VISIBLE_DEVICES": "1" },
+      "args": [
+        "splatfacto",
+        "--vis=viewer+tensorboard",
+        // "nerfstudio-data",
+        "--data=data/nerfstudio/gs-hloc/Giannini-Hall",
+      ]
+    },
+    {
+      "name": "Python: Splatfacto on Egypt",
+      "type": "python",
+      "request": "launch",
+      "program": "nerfstudio/scripts/train.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": { "CUDA_VISIBLE_DEVICES": "0" },
+      "args": [
+        "splatfacto",
+        "--vis=viewer+tensorboard",
+        "nerfstudio-data",
+        "--data=data/nerfstudio/Egypt",
+      ]
     }
   ]
 }
