@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from typing import Dict, Union
+from pathlib import Path
 
 import tyro
 
@@ -65,6 +66,15 @@ from nerfstudio.pipelines.base_pipeline import VanillaPipelineConfig
 from nerfstudio.pipelines.dynamic_batch import DynamicBatchPipelineConfig
 from nerfstudio.plugins.registry import discover_methods
 
+from nerfstudio.engine.my_schedulers import WarmupMultiStepSchedulerConfig
+from nerfstudio.models.PreSight.nerfacto_nusc_ms import NerfactoNuscMSModelConfig
+
+from nerfstudio.pipelines.PreSight.my_pipeline import MyPipelineConfig
+
+from nerfstudio.data.PreSight.my_datamanager import MyDataManagerConfig
+from nerfstudio.data.PreSight.mynuscenes_ms_dataparser import MyNuScenesMSDataParserConfig
+from nerfstudio.data.PreSight.constants import FEATURES, RGB, DEPTH, SEG, MASK
+
 method_configs: Dict[str, Union[TrainerConfig, ExternalMethodDummyTrainerConfig]] = {}
 descriptions = {
     "nerfacto": "Recommended real-time model tuned for real captures. This model will be continually updated.",
@@ -82,6 +92,12 @@ descriptions = {
     "neus-facto": "Implementation of NeuS-Facto. (slow)",
     "splatfacto": "Gaussian Splatting model",
 }
+
+data_root = Path("/home/user/data/juyeb/PreSight/nuscenes/")
+
+pose_rescale_factor = 0.05
+bs_scale = 8
+max_iterations = 100000
 
 method_configs["nerfacto"] = TrainerConfig(
     method_name="nerfacto",
@@ -636,6 +652,116 @@ method_configs["splatfacto"] = TrainerConfig(
     viewer=ViewerConfig(num_rays_per_chunk=1 << 15),
     vis="viewer",
 )
+
+for i in range(4):
+    name = f"singapore-onenorth-monodepth-dino-c{i}"
+    method_configs[name] = TrainerConfig(
+        output_dir=Path("./outputs"),
+        experiment_name="singapore-onenorth-monodepth",
+        method_name=name,
+        max_num_iterations=max_iterations,
+        pipeline=MyPipelineConfig(
+            datamanager=MyDataManagerConfig(
+                dataparser=MyNuScenesMSDataParserConfig(
+                    location="singapore-onenorth",
+                    centroid_name=str(i),
+                    num_aabbs=16,
+                    use_gt_masks=False,
+                    depth_type="monodepth",
+                    data_dir=data_root,
+                ),
+                train_num_rays_per_batch=8192*bs_scale,
+            ),
+            model=NerfactoNuscMSModelConfig(
+                near_plane=0.1*pose_rescale_factor,
+                far_plane=1000.0*pose_rescale_factor,
+                piecewise_sampler_threshold=100.0*pose_rescale_factor,
+                proposal_weights_anneal_max_num_iters=max_iterations//10,
+                proposal_warmup=max_iterations//10,
+                use_lidar_loss=False,
+                use_monodepth_loss=True,
+                expected_depth_loss_mult=0.1,
+                line_of_sight_mult=0.01,
+                monodepth_depth_upperbound=25.0,
+                line_of_sight_decay_steps=max_iterations,
+                line_of_sight_start_step=max_iterations//20,
+                line_of_sight_end_step=max_iterations,
+                line_of_sight_max_sigma=6.0,
+                line_of_sight_min_sigma=4.0,
+                distortion_loss_mult=0.01,
+                camera_optimizer=CameraOptimizerConfig(mode="off"),
+            ),
+        ),
+        optimizers={
+            "proposal_networks": {
+                "optimizer": AdamOptimizerConfig(lr=1e-2, eps=1e-15, weight_decay=1e-5),
+                "scheduler": WarmupMultiStepSchedulerConfig(max_steps=max_iterations, 
+                    milestones=[max_iterations//4, max_iterations//2, max_iterations*3//4], 
+                    warmup_steps=max_iterations//10),
+            },
+            "fields": {
+                "optimizer": AdamOptimizerConfig(lr=1e-2, eps=1e-15, weight_decay=1e-5),
+                "scheduler": WarmupMultiStepSchedulerConfig(max_steps=max_iterations, 
+                    milestones=[max_iterations//4, max_iterations//2, max_iterations*3//4], 
+                    warmup_steps=max_iterations//10),
+            },
+            "camera_opt": {
+                # "mode"="off",
+                "optimizer": AdamOptimizerConfig(lr=6e-6, eps=1e-15),
+                "scheduler": ExponentialDecaySchedulerConfig(lr_final=6e-4, max_steps=250000)
+            },
+        },
+        vis="viewer+wandb",
+    )
+
+    name = f"singapore-onenorth-camera-dino-c{i}"
+    method_configs[name] = TrainerConfig(
+        output_dir=Path("./outputs"),
+        experiment_name="singapore-onenorth-camera",
+        method_name=name,
+        max_num_iterations=max_iterations,
+        pipeline=MyPipelineConfig(
+            datamanager=MyDataManagerConfig(
+                dataparser=MyNuScenesMSDataParserConfig(
+                    location="singapore-onenorth",
+                    centroid_name=str(i),
+                    num_aabbs=16,
+                    use_gt_masks=False,
+                    data_dir=data_root,
+                ),
+                train_num_rays_per_batch=8192*bs_scale,
+            ),
+            model=NerfactoNuscMSModelConfig(
+                near_plane=0.1*pose_rescale_factor,
+                far_plane=1000.0*pose_rescale_factor,
+                piecewise_sampler_threshold=100.0*pose_rescale_factor,
+                proposal_weights_anneal_max_num_iters=max_iterations//10,
+                proposal_warmup=max_iterations//10,
+                use_lidar_loss=False,
+                camera_optimizer=CameraOptimizerConfig(mode="off"),
+            ),
+        ),
+        optimizers={
+            "proposal_networks": {
+                "optimizer": AdamOptimizerConfig(lr=1e-2, eps=1e-15, weight_decay=1e-5),
+                "scheduler": WarmupMultiStepSchedulerConfig(max_steps=max_iterations, 
+                    milestones=[max_iterations//4, max_iterations//2, max_iterations*3//4], 
+                    warmup_steps=max_iterations//10),
+            },
+            "fields": {
+                "optimizer": AdamOptimizerConfig(lr=1e-2, eps=1e-15, weight_decay=1e-5),
+                "scheduler": WarmupMultiStepSchedulerConfig(max_steps=max_iterations, 
+                    milestones=[max_iterations//4, max_iterations//2, max_iterations*3//4], 
+                    warmup_steps=max_iterations//10),
+            },
+            "camera_opt": {
+                # "mode"="off",
+                "optimizer": AdamOptimizerConfig(lr=6e-6, eps=1e-15),
+                "scheduler": ExponentialDecaySchedulerConfig(lr_final=6e-4, max_steps=250000)
+            },
+        },
+        vis="viewer+wandb",
+    )
 
 
 def merge_methods(methods, method_descriptions, new_methods, new_descriptions, overwrite=True):

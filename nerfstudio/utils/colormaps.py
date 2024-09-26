@@ -208,3 +208,27 @@ def apply_pca_colormap(image: Float[Tensor, "*bs dim"]) -> Float[Tensor, "*bs rg
     assert image_long_min >= 0, f"the min value is {image_long_min}"
     assert image_long_max <= 255, f"the max value is {image_long_max}"
     return image.view(*original_shape[:-1], 3)
+
+def apply_feature_colormap(image: Float[Tensor, "*bs dim"], dino_to_rgb: dict) -> Float[Tensor, "*bs rgb=3"]:
+    """Convert feature image to 3-channel RGB via PCA. The first three principle
+    components are used for the color channels, with outlier rejection per-channel
+
+    Args:
+        image: image of arbitrary vectors
+
+    Returns:
+        Tensor: Colored image
+    """
+    original_shape = image.shape
+    reduction_matrix = dino_to_rgb["reduction_matrix"].to(image)
+    rgb_mins = dino_to_rgb["rgb_min"].to(image)
+    rgb_maxs = dino_to_rgb["rgb_max"].to(image)
+    means = dino_to_rgb["mean"].to(image)
+    
+    image = (image - means) @ reduction_matrix
+    # rgb_maxs = image.max(dim=0)[0]
+    # rgb_mins = image.min(dim=0)[0]
+    image = (image - rgb_mins) / (rgb_maxs - rgb_mins)
+
+    image = torch.clamp(image, 0, 1)
+    return image

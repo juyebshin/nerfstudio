@@ -52,6 +52,7 @@ class DynamicBatchPipeline(VanillaPipeline):
         world_size: int = 1,
         local_rank: int = 0,
         grad_scaler: Optional[GradScaler] = None,
+        log_dir: str = "",
     ):
         super().__init__(config, device, test_mode, world_size, local_rank)
         assert isinstance(

@@ -326,7 +326,7 @@ class DepthRenderer(nn.Module):
         method: Depth calculation method.
     """
 
-    def __init__(self, method: Literal["median", "expected"] = "median") -> None:
+    def __init__(self, method: Literal["median", "threshold", "expected"] = "median") -> None:
         super().__init__()
         self.method = method
 
@@ -336,6 +336,7 @@ class DepthRenderer(nn.Module):
         ray_samples: RaySamples,
         ray_indices: Optional[Int[Tensor, "num_samples"]] = None,
         num_rays: Optional[int] = None,
+        threshold: float = 0.5,
     ) -> Float[Tensor, "*batch 1"]:
         """Composite samples along ray and calculate depths.
 
@@ -356,6 +357,17 @@ class DepthRenderer(nn.Module):
                 raise NotImplementedError("Median depth calculation is not implemented for packed samples.")
             cumulative_weights = torch.cumsum(weights[..., 0], dim=-1)  # [..., num_samples]
             split = torch.ones((*weights.shape[:-2], 1), device=weights.device) * 0.5  # [..., 1]
+            median_index = torch.searchsorted(cumulative_weights, split, side="left")  # [..., 1]
+            median_index = torch.clamp(median_index, 0, steps.shape[-2] - 1)  # [..., 1]
+            median_depth = torch.gather(steps[..., 0], dim=-1, index=median_index)  # [..., 1]
+            return median_depth
+        if self.method == "threshold":
+            steps = (ray_samples.frustums.starts + ray_samples.frustums.ends) / 2
+
+            if ray_indices is not None and num_rays is not None:
+                raise NotImplementedError("Median depth calculation is not implemented for packed samples.")
+            cumulative_weights = torch.cumsum(weights[..., 0], dim=-1)  # [..., num_samples]
+            split = torch.ones((*weights.shape[:-2], 1), device=weights.device) * threshold  # [..., 1]
             median_index = torch.searchsorted(cumulative_weights, split, side="left")  # [..., 1]
             median_index = torch.clamp(median_index, 0, steps.shape[-2] - 1)  # [..., 1]
             median_depth = torch.gather(steps[..., 0], dim=-1, index=median_index)  # [..., 1]

@@ -114,7 +114,7 @@ class NeRFEncoding(Encoding):
         min_freq_exp: float,
         max_freq_exp: float,
         include_input: bool = False,
-        implementation: Literal["tcnn", "torch"] = "torch",
+        implementation: Literal["tcnn", "torch", "tcnn+fp32"] = "torch",
     ) -> None:
         super().__init__(in_dim)
 
@@ -124,15 +124,16 @@ class NeRFEncoding(Encoding):
         self.include_input = include_input
 
         self.tcnn_encoding = None
-        if implementation == "tcnn" and not TCNN_EXISTS:
+        if implementation in ["tcnn", "tcnn+fp32"] and not TCNN_EXISTS:
             print_tcnn_speed_warning("NeRFEncoding")
-        elif implementation == "tcnn":
+        elif implementation  in ["tcnn", "tcnn+fp32"]:
             assert min_freq_exp == 0, "tcnn only supports min_freq_exp = 0"
             assert max_freq_exp == num_frequencies - 1, "tcnn only supports max_freq_exp = num_frequencies - 1"
             encoding_config = self.get_tcnn_encoding_config(num_frequencies=self.num_frequencies)
             self.tcnn_encoding = tcnn.Encoding(
                 n_input_dims=in_dim,
                 encoding_config=encoding_config,
+                dtype=torch.float32 if implementation == "tcnn+fp32" else None
             )
 
     @classmethod
@@ -329,7 +330,7 @@ class HashEncoding(Encoding):
         log2_hashmap_size: int = 19,
         features_per_level: int = 2,
         hash_init_scale: float = 0.001,
-        implementation: Literal["tcnn", "torch"] = "tcnn",
+        implementation: Literal["tcnn", "torch", "tcnn+fp32"] = "tcnn",
         interpolation: Optional[Literal["Nearest", "Linear", "Smoothstep"]] = None,
     ) -> None:
         super().__init__(in_dim=3)
@@ -350,10 +351,10 @@ class HashEncoding(Encoding):
         self.hash_table = torch.empty(0)
         if implementation == "torch":
             self.build_nn_modules()
-        elif implementation == "tcnn" and not TCNN_EXISTS:
+        elif implementation in ["tcnn", "tcnn+fp32"] and not TCNN_EXISTS:
             print_tcnn_speed_warning("HashEncoding")
             self.build_nn_modules()
-        elif implementation == "tcnn":
+        elif implementation in ["tcnn", "tcnn+fp32"]:
             encoding_config = self.get_tcnn_encoding_config(
                 num_levels=self.num_levels,
                 features_per_level=self.features_per_level,
@@ -365,6 +366,7 @@ class HashEncoding(Encoding):
             self.tcnn_encoding = tcnn.Encoding(
                 n_input_dims=3,
                 encoding_config=encoding_config,
+                dtype=torch.float32 if implementation == "tcnn+fp32" else None
             )
 
         if self.tcnn_encoding is None:
@@ -759,7 +761,7 @@ class SHEncoding(Encoding):
         levels: Number of spherical harmonic levels to encode.
     """
 
-    def __init__(self, levels: int = 4, implementation: Literal["tcnn", "torch"] = "torch") -> None:
+    def __init__(self, levels: int = 4, implementation: Literal["tcnn", "torch", "tcnn+fp32"] = "torch") -> None:
         super().__init__(in_dim=3)
 
         if levels <= 0 or levels > 4:
@@ -768,13 +770,14 @@ class SHEncoding(Encoding):
         self.levels = levels
 
         self.tcnn_encoding = None
-        if implementation == "tcnn" and not TCNN_EXISTS:
+        if implementation in ["tcnn", "tcnn+fp32"] and not TCNN_EXISTS:
             print_tcnn_speed_warning("SHEncoding")
-        elif implementation == "tcnn":
+        elif implementation in ["tcnn", "tcnn+fp32"]:
             encoding_config = self.get_tcnn_encoding_config(levels=self.levels)
             self.tcnn_encoding = tcnn.Encoding(
                 n_input_dims=3,
                 encoding_config=encoding_config,
+                dtype=torch.float32 if implementation == "tcnn+fp32" else None
             )
 
     @classmethod

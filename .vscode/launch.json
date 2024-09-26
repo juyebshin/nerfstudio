@@ -178,6 +178,21 @@
         "nerfstudio-data",
         "--data=data/nerfstudio/Egypt",
       ]
+    },
+    {
+      "name": "Python: PreSight",
+      "type": "python",
+      "request": "launch",
+      "program": "nerfstudio/scripts/train.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": { "CUDA_VISIBLE_DEVICES": "1" },
+      "args": [
+        "singapore-onenorth-camera-dino-c0",
+        // "--vis=viewer+tensorboard",
+        // "nerfstudio-data",
+        // "--data=data/nerfstudio/Egypt",
+      ]
     }
   ]
 }

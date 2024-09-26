@@ -247,6 +247,7 @@ class VanillaPipeline(Pipeline):
         world_size: int = 1,
         local_rank: int = 0,
         grad_scaler: Optional[GradScaler] = None,
+        log_dir: str = "",
     ):
         super().__init__()
         self.config = config
