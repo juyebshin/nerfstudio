@@ -39,6 +39,8 @@ from nerfstudio.process_data.images_to_nerfstudio_dataset import ImagesToNerfstu
 from nerfstudio.process_data.video_to_nerfstudio_dataset import VideoToNerfstudioDataset
 from nerfstudio.utils.rich_utils import CONSOLE
 
+from nerfstudio.process_data.Ann.nusc_to_nerfstudio_dataset import NuscToNerfstudioDataset
+
 
 @dataclass
 class ProcessRecord3D(BaseConverterToNerfstudioDataset):
@@ -489,6 +491,7 @@ Commands = Union[
     Annotated[ProcessRealityCapture, tyro.conf.subcommand(name="realitycapture")],
     Annotated[ProcessRecord3D, tyro.conf.subcommand(name="record3d")],
     Annotated[ProcessODM, tyro.conf.subcommand(name="odm")],
+    Annotated[NuscToNerfstudioDataset, tyro.conf.subcommand(name="nuscenes")],
 ]
 
 # Add aria subcommand if projectaria_tools is installed.

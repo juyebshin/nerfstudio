@@ -193,6 +193,48 @@
         // "nerfstudio-data",
         // "--data=data/nerfstudio/Egypt",
       ]
-    }
+    },
+    {
+      "name": "Python: Process data (nuscenes)",
+      "type": "python",
+      "request": "launch",
+      "program": "nerfstudio/scripts/process_data.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": { "CUDA_VISIBLE_DEVICES": "0" },
+      "args": [
+        "nuscenes",
+        "--data=data/nuscenes",
+        "--output-dir=data/nuscenes",
+        "--sfm-tool=hloc",
+        "--feature-type=superpoint",
+        "--matcher-type=superglue",
+        "--skip-image-processing",
+        // "--vis=viewer+tensorboard",
+        // "nerfstudio-data",
+        // "--data=data/nerfstudio/Egypt",
+      ]
+    },
+    {
+      "name": "Python: Process data (nerfstudio)",
+      "type": "python",
+      "request": "launch",
+      "program": "nerfstudio/scripts/process_data.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": { "CUDA_VISIBLE_DEVICES": "0" },
+      "args": [
+        "images",
+        "--data=data/nerfstudio/Giannini-Hall/images",
+        "--output-dir=data/nerfstudio/gs-hloc/Giannini-Hall",
+        "--sfm-tool=hloc",
+        "--feature-type=superpoint",
+        "--matcher-type=superglue",
+        "--skip-image-processing",
+        // "--vis=viewer+tensorboard",
+        // "nerfstudio-data",
+        // "--data=data/nerfstudio/Egypt",
+      ]
+    },
   ]
 }
