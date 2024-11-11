@@ -201,11 +201,13 @@
       "program": "nerfstudio/scripts/process_data.py",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "env": { "CUDA_VISIBLE_DEVICES": "0" },
+      "env": { "CUDA_VISIBLE_DEVICES": "1" },
       "args": [
         "nuscenes",
         "--data=data/nuscenes",
         "--output-dir=data/nuscenes",
+        "--centroid-name=0",
+        "--cameras=CAM_FRONT"
         "--sfm-tool=hloc",
         "--feature-type=superpoint",
         "--matcher-type=superglue",

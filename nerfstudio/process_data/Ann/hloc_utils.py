@@ -109,8 +109,8 @@ def run_hloc(
     matcher_conf = match_features.confs[matcher_type]  # type: ignore
     
     # TODO
-    # image_dir as nuscenes/samples Done
-    # references as CAM_FRONT/~.jpg, CAM_FRONT_LEFT/~.jpg, ... Done
+    # image_dir as data/nuscenes
+    # references as samples/CAM_FRONT/~.jpg, sweeps/CAM_FRONT_LEFT/~.jpg, ...
     extract_features.main(feature_conf, image_dir, image_list=references, feature_path=features)  # type: ignore
     if matching_method == "exhaustive":
         pairs_from_exhaustive.main(sfm_pairs, image_list=references)  # type: ignore
@@ -151,6 +151,7 @@ def run_hloc(
             features,
             matches,
             camera_mode=pycolmap.CameraMode.SINGLE,  # type: ignore
+            image_list=references,
             image_options=image_options,
             verbose=verbose,
         )

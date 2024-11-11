@@ -54,6 +54,17 @@ class NuscToNerfstudioDataset(ColmapConverterToNerfstudioDataset):
         "CAM_FRONT", "CAM_FRONT_LEFT", "CAM_FRONT_RIGHT", "CAM_BACK", "CAM_BACK_LEFT", "CAM_BACK_RIGHT")
     """Which cameras to use."""
 
+    @property
+    def absolute_colmap_model_path(self) -> Path:
+        return self.absolute_colmap_path / "sparse/0"
+
+    @property
+    def absolute_colmap_path(self) -> Path:
+        if len(self.cameras) == 1:
+            return self.output_dir / "colmap" / f"{self.location}_c{self.centroid_name}" / f"{self.cameras[0]}"
+        else:
+            return self.output_dir / "colmap" / f"{self.location}_c{self.centroid_name}"
+
     def main(self) -> None:
         """Process nuScenes into a nerfstudio dataset."""
         
@@ -82,7 +93,10 @@ class NuscToNerfstudioDataset(ColmapConverterToNerfstudioDataset):
             f"{self.location}",
             f"{self.location}_centroids.json"), 'r') as f:
             scene_dict = json.load(f)
-            [self.scene_names.extend(v) for k, v in scene_dict.items()]
+            # [self.scene_names.extend(v) for k, v in scene_dict.items()]
+            self.scene_names.extend(scene_dict.get(self.centroid_name, []))
+        
+        assert len(self.scene_names) != 0, f"centroid {self.centroid_name} out of bound"
         
         for scene_name in self.scene_names:
             with open(os.path.join(str(self.data), "PreSight", f'{scene_name}.pkl'), 'rb') as f:
@@ -115,7 +129,8 @@ class NuscToNerfstudioDataset(ColmapConverterToNerfstudioDataset):
             img_fpath = Path(sample_data['filename'])
             self.image_filenames.append(img_fpath.relative_to(self.data))
         
-        summary_log.append(f"Starting with {len(self.image_filenames)} images")
+        num_frames = len(self.image_filenames)
+        summary_log.append(f"Starting with {num_frames} images")
 
         # Run COLMAP
         if not self.skip_colmap:
@@ -129,7 +144,7 @@ class NuscToNerfstudioDataset(ColmapConverterToNerfstudioDataset):
         summary_log += log_tmp
 
         if require_cameras_exist and not (self.absolute_colmap_model_path / "cameras.bin").exists():
-            raise RuntimeError(f"Could not find existing COLMAP results ({self.colmap_model_path / 'cameras.bin'}).")
+            raise RuntimeError(f"Could not find existing COLMAP results ({self.absolute_colmap_model_path / 'cameras.bin'}).")
 
         summary_log += self._save_transforms(
             num_frames,
