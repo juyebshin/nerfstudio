@@ -195,7 +195,7 @@
       ]
     },
     {
-      "name": "Python: Process data (nuscenes)",
+      "name": "Python: Process nuscenes using colmap",
       "type": "python",
       "request": "launch",
       "program": "nerfstudio/scripts/process_data.py",
@@ -207,7 +207,31 @@
         "--data=data/nuscenes",
         "--output-dir=data/nuscenes",
         "--centroid-name=0",
-        "--cameras=CAM_FRONT"
+        // "--cameras=CAM_FRONT"
+        "--matching-method=sequential",
+        "--sfm-tool=colmap",
+        "--feature-type=sift",
+        "--matcher-type=any",
+        "--skip-image-processing",
+        // "--vis=viewer+tensorboard",
+        // "nerfstudio-data",
+        // "--data=data/nerfstudio/Egypt",
+      ]
+    },
+    {
+      "name": "Python: Process nuscenes using hloc",
+      "type": "python",
+      "request": "launch",
+      "program": "nerfstudio/scripts/process_data.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": { "CUDA_VISIBLE_DEVICES": "4" },
+      "args": [
+        "nuscenes",
+        "--data=data/nuscenes",
+        "--output-dir=data/nuscenes",
+        "--centroid-name=0",
+        // "--cameras=CAM_FRONT"
         "--sfm-tool=hloc",
         "--feature-type=superpoint",
         "--matcher-type=superglue",
@@ -236,6 +260,17 @@
         // "--vis=viewer+tensorboard",
         // "nerfstudio-data",
         // "--data=data/nerfstudio/Egypt",
+      ]
+    },
+    {
+      "name": "Python: vis colmap",
+      "type": "python",
+      "request": "launch",
+      "program": "nerfstudio/process_data/Ann/colmap_vis.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "--colmap-path=data/nuscenes/hloc/singapore-onenorth_c0/scene-0013/sparse/0"
       ]
     },
   ]

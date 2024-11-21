@@ -42,8 +42,6 @@ def parse_args():
     
     return args
 
-feature_path = 'data/nuscenes/colmap/features.h5'
-
 def main():
     args = parse_args()
     nusc = NuScenes(version='v1.0-trainval', dataroot=args.dataroot, verbose=True)
@@ -69,6 +67,8 @@ def main():
                       [1.        , 0.48002905, 0.        ],
                       [0.99910873, 0.07334786, 0.        ],
                       [0.5       , 0.        , 0.        ]])
+
+    feature_path = 'data/nuscenes/colmap/singapore-onenorth_c0/CAM_FRONT/scene-0962/features.h5'
 
     args.out_dir = os.path.dirname(feature_path)
     os.makedirs(args.out_dir, exist_ok=True)

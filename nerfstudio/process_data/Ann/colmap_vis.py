@@ -16,7 +16,7 @@ from viser.extras.colmap import (
 
 
 def main(
-    colmap_path: Path = Path("data/nuscenes/colmap/singapore-onenorth_c0/CAM_FRONT/sparse/0"),
+    colmap_path: Path = Path("data/nuscenes/colmap/sparse/0"),
     images_path: Path = Path("data/nuscenes"),
     downsample_factor: int = 2,
 ) -> None:
@@ -117,7 +117,7 @@ def main(
             )
 
             # For pinhole cameras, cam.params will be (fx, fy, cx, cy).
-            if cam.model != "PINHOLE":
+            if cam.model != "PINHOLE" and cam.model != "OPENCV":
                 print(f"Expected pinhole camera, but got {cam.model}")
 
             H, W = cam.height, cam.width
@@ -132,6 +132,18 @@ def main(
                 image=image,
             )
             attach_callback(frustum, frame)
+
+        for client in server.get_clients().values():
+            # print(client.camera.position)
+            client.camera.position = points.mean(0) + onp.array([0.0, 0.0, 1000.0])
+            client.camera.look_at = points.mean(0)
+        server.add_frame(
+            f"/mean_frame",
+            wxyz=server.world_axes.wxyz,
+            position=points.mean(0),
+            axes_length=3.0,
+            axes_radius=0.00,
+        )
 
     need_update = True
 

@@ -21,7 +21,7 @@ Requires hloc module from : https://github.com/cvg/Hierarchical-Localization
 
 import sys
 from pathlib import Path
-from typing import Literal, List
+from typing import Literal, List, Optional
 
 from nerfstudio.process_data.process_data_utils import CameraModel
 from nerfstudio.utils.rich_utils import CONSOLE
@@ -35,6 +35,7 @@ try:
         pairs_from_exhaustive,
         pairs_from_retrieval,
         reconstruction,
+        triangulation,
     )
 except ImportError:
     _HAS_HLOC = False
@@ -55,6 +56,7 @@ def run_hloc(
     references: List[Path],
     colmap_dir: Path,
     camera_model: CameraModel,
+    reference_model_dir: Optional[Path] = None,
     verbose: bool = False,
     matching_method: Literal["vocab_tree", "exhaustive", "sequential"] = "vocab_tree",
     feature_type: Literal[
@@ -121,7 +123,7 @@ def run_hloc(
         pairs_from_retrieval.main(retrieval_path, sfm_pairs, num_matched=num_matched)  # type: ignore
     match_features.main(matcher_conf, sfm_pairs, features=features, matches=matches)  # type: ignore
 
-    image_options = pycolmap.ImageReaderOptions(camera_model=camera_model.value)  # type: ignore
+    image_options = pycolmap.ImageReaderOptions(camera_model=camera_model.value)  # type: ignore    
     if refine_pixsfm:
         sfm = PixSfM(  # type: ignore
             conf={
@@ -130,28 +132,56 @@ def run_hloc(
                 "BA": {"strategy": "costmaps"},
             }
         )
-        refined, _ = sfm.reconstruction(
-            sfm_dir,
-            image_dir,
-            sfm_pairs,
-            features,
-            matches,
-            image_list=references,
-            camera_mode=pycolmap.CameraMode.SINGLE,  # type: ignore
-            image_options=image_options,
-            verbose=verbose,
-        )
+        if reference_model_dir is not None:
+            refined, _ = sfm.reconstruction(
+                sfm_dir,
+                reference_model_dir,
+                image_dir,
+                sfm_pairs,
+                features,
+                matches,
+                image_list=references,
+                image_options=image_options,
+                verbose=verbose,
+            )
+        else:
+            refined, _ = sfm.reconstruction(
+                sfm_dir,
+                image_dir,
+                sfm_pairs,
+                features,
+                matches,
+                image_list=references,
+                camera_mode=pycolmap.CameraMode.SINGLE,  # type: ignore
+                image_options=image_options,
+                verbose=verbose,
+            )
         print("Refined", refined.summary())
 
     else:
-        reconstruction.main(  # type: ignore
-            sfm_dir,
-            image_dir,
-            sfm_pairs,
-            features,
-            matches,
-            camera_mode=pycolmap.CameraMode.SINGLE,  # type: ignore
-            image_list=references,
-            image_options=image_options,
-            verbose=verbose,
-        )
+        if reference_model_dir is not None:
+            model = triangulation.main(
+                sfm_dir,
+                reference_model_dir,
+                image_dir,
+                sfm_pairs,
+                features,
+                matches,
+                verbose=verbose,
+            )
+        else:
+            model = reconstruction.main(  # type: ignore
+                sfm_dir,
+                image_dir,
+                sfm_pairs,
+                features,
+                matches,
+                camera_mode=pycolmap.CameraMode.SINGLE,  # type: ignore
+                image_list=references,
+                image_options=image_options,
+                verbose=verbose,
+            )
+        
+        if False:
+            from hloc import visualization
+            visualization.visualize_sfm_2d(model, image_dir, color_by="visibility", n=1)
