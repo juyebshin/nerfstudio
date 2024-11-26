@@ -55,6 +55,8 @@ class NuscToNerfstudioDataset(ColmapConverterToNerfstudioDataset):
     cameras: Tuple[Literal["CAM_FRONT", "CAM_FRONT_LEFT", "CAM_FRONT_RIGHT", "CAM_BACK", "CAM_BACK_LEFT", "CAM_BACK_RIGHT"], ...] = (
         "CAM_FRONT", "CAM_FRONT_LEFT", "CAM_FRONT_RIGHT", "CAM_BACK", "CAM_BACK_LEFT", "CAM_BACK_RIGHT")
     """Which cameras to use."""
+    use_keyframes: bool = False
+    """If True, only use keyframes."""
 
     @property
     def absolute_colmap_model_path(self) -> Path:
@@ -285,6 +287,8 @@ class NuscToNerfstudioDataset(ColmapConverterToNerfstudioDataset):
                 # create initial model with sample_data['cam_intrinsic'] 3x3
                 # sample_data['ego2global'] @ sample_data['cam2ego']
                 if sample_data['channel'] not in self.cameras:
+                    continue
+                if self.use_keyframes and not sample_data['is_key_frame']:
                     continue
 
                 channel = sample_data['channel']
