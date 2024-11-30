@@ -65,9 +65,9 @@ class NuscToNerfstudioDataset(ColmapConverterToNerfstudioDataset):
     @property
     def absolute_colmap_path(self) -> Path:
         if len(self.cameras) == 1:
-            return self.output_dir / self.sfm_tool / f"{self.location}_c{self.centroid_name}" / f"{self.cameras[0]}"
+            return self.output_dir / self.sfm_tool / f"{self.location}-c{self.centroid_name}" / f"{self.cameras[0]}"
         else:
-            return self.output_dir / self.sfm_tool / f"{self.location}_c{self.centroid_name}"
+            return self.output_dir / self.sfm_tool / f"{self.location}-c{self.centroid_name}"
 
     def _save_transforms(
         self,
@@ -94,6 +94,7 @@ class NuscToNerfstudioDataset(ColmapConverterToNerfstudioDataset):
                     image_id_to_depth_path=image_id_to_depth_path,
                     camera_mask_path=camera_mask_path,
                     image_rename_map=image_rename_map,
+                    # keep_original_world_coordinate=True,
                 )
                 summary_log.append(f"Colmap matched {num_matched_frames} images")
             summary_log.append(colmap_utils.get_matching_summary(num_frames, num_matched_frames))
@@ -247,7 +248,7 @@ class NuscToNerfstudioDataset(ColmapConverterToNerfstudioDataset):
         summary_log = []
         sample_data_list = [] 
 
-        summary_log.append(f"Reconstructing {len(self.scene_names)} scenes in {self.location}")
+        summary_log.append(f"Reconstructing {len(self.scene_names)} scenes in {self.location}-c{self.centroid_name}")
 
         require_cameras_exist = False
         if self.colmap_model_path != ColmapConverterToNerfstudioDataset.default_colmap_path():

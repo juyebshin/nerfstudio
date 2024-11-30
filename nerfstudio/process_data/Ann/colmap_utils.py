@@ -477,7 +477,7 @@ def colmap_to_json(
         name = im_data.name
         if image_rename_map is not None:
             name = image_rename_map[name]
-        name = Path(f"./data/nuscenes/{name}")
+        name = Path(f"./data/nuscenes/{name}") # or name ?
 
         cam = cam_id_to_camera[im_data.camera_id]
 
