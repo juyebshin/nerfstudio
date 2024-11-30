@@ -75,6 +75,10 @@ from nerfstudio.data.PreSight.my_datamanager import MyDataManagerConfig
 from nerfstudio.data.PreSight.mynuscenes_ms_dataparser import MyNuScenesMSDataParserConfig
 from nerfstudio.data.PreSight.constants import FEATURES, RGB, DEPTH, SEG, MASK
 
+from nerfstudio.models.Ann.splatfacto_nusc import SplatfactoNuscModelConfig
+from nerfstudio.data.Ann.nusc_full_images_datamanager import NuscFullImageDatamanagerConfig
+from nerfstudio.data.Ann.nuscenes_dataparser import NuscDataParserConfig
+
 method_configs: Dict[str, Union[TrainerConfig, ExternalMethodDummyTrainerConfig]] = {}
 descriptions = {
     "nerfacto": "Recommended real-time model tuned for real captures. This model will be continually updated.",
@@ -652,6 +656,173 @@ method_configs["splatfacto"] = TrainerConfig(
     viewer=ViewerConfig(num_rays_per_chunk=1 << 15),
     vis="viewer",
 )
+
+for i in range(4):
+    name=f"singapore-onenorth-splat-c{i}"
+    method_configs[name] = TrainerConfig(
+        experiment_name="singapore-onenorth-splat",
+        method_name=name,
+        steps_per_eval_image=100,
+        steps_per_eval_batch=0,
+        steps_per_save=2000,
+        steps_per_eval_all_images=1000,
+        max_num_iterations=max_iterations,
+        mixed_precision=False,
+        gradient_accumulation_steps={"camera_opt": 100},
+        pipeline=VanillaPipelineConfig(
+            datamanager=NuscFullImageDatamanagerConfig(
+                dataparser=NuscDataParserConfig(
+                    location="singapore-onenorth",
+                    centroid_name=str(i),
+                    load_3D_points=True),
+            ),
+            model=SplatfactoNuscModelConfig(
+                # collider_params={"near_plane": 0.1, "far_plane": 1000},
+                ),
+        ),
+        optimizers={
+            "xyz": {
+                "optimizer": AdamOptimizerConfig(lr=1.6e-4, eps=1e-15),
+                "scheduler": ExponentialDecaySchedulerConfig(
+                    lr_final=1.6e-6,
+                    max_steps=max_iterations, # to debug
+                ),
+            },
+            "features_dc": {
+                "optimizer": AdamOptimizerConfig(lr=0.0025, eps=1e-15),
+                "scheduler": None,
+            },
+            "features_rest": {
+                "optimizer": AdamOptimizerConfig(lr=0.0025 / 20, eps=1e-15),
+                "scheduler": None,
+            },
+            "opacity": {
+                "optimizer": AdamOptimizerConfig(lr=0.05, eps=1e-15),
+                "scheduler": None,
+            },
+            "scaling": {
+                "optimizer": AdamOptimizerConfig(lr=0.005, eps=1e-15),
+                "scheduler": None,
+            },
+            "rotation": {"optimizer": AdamOptimizerConfig(lr=0.001, eps=1e-15), "scheduler": None},
+            "camera_opt": {
+                "optimizer": AdamOptimizerConfig(lr=1e-3, eps=1e-15),
+                "scheduler": ExponentialDecaySchedulerConfig(lr_final=5e-5, max_steps=max_iterations), # to debug
+            },
+        },
+        viewer=ViewerConfig(num_rays_per_chunk=1 << 15),
+        vis="viewer",
+    )
+
+for i in range(8):
+    name = f"boston-seaport-monodepth-dino-c{i}"
+    method_configs[name] = TrainerConfig(
+        output_dir=Path("./outputs"),
+        experiment_name="boston-seaport-monodepth",
+        method_name=name,
+        max_num_iterations=max_iterations,
+        pipeline=MyPipelineConfig(
+            datamanager=MyDataManagerConfig(
+                dataparser=MyNuScenesMSDataParserConfig(
+                    location="boston-seaport",
+                    centroid_name=str(i),
+                    num_aabbs=16,
+                    use_gt_masks=False,
+                    depth_type="monodepth",
+                    data_dir=data_root,
+                ),
+                train_num_rays_per_batch=8192*bs_scale,
+            ),
+            model=NerfactoNuscMSModelConfig(
+                near_plane=0.1*pose_rescale_factor,
+                far_plane=1000.0*pose_rescale_factor,
+                piecewise_sampler_threshold=100.0*pose_rescale_factor,
+                proposal_weights_anneal_max_num_iters=max_iterations//10,
+                proposal_warmup=max_iterations//10,
+                use_lidar_loss=False,
+                use_monodepth_loss=True,
+                expected_depth_loss_mult=0.1,
+                line_of_sight_mult=0.01,
+                monodepth_depth_upperbound=25.0,
+                line_of_sight_decay_steps=max_iterations,
+                line_of_sight_start_step=max_iterations//20,
+                line_of_sight_end_step=max_iterations,
+                line_of_sight_max_sigma=6.0,
+                line_of_sight_min_sigma=4.0,
+                distortion_loss_mult=0.01,
+                camera_optimizer=CameraOptimizerConfig(mode="off"),
+            ),
+        ),
+        optimizers={
+            "proposal_networks": {
+                "optimizer": AdamOptimizerConfig(lr=1e-2, eps=1e-15, weight_decay=1e-5),
+                "scheduler": WarmupMultiStepSchedulerConfig(max_steps=max_iterations, 
+                    milestones=[max_iterations//4, max_iterations//2, max_iterations*3//4], 
+                    warmup_steps=max_iterations//10),
+            },
+            "fields": {
+                "optimizer": AdamOptimizerConfig(lr=1e-2, eps=1e-15, weight_decay=1e-5),
+                "scheduler": WarmupMultiStepSchedulerConfig(max_steps=max_iterations, 
+                    milestones=[max_iterations//4, max_iterations//2, max_iterations*3//4], 
+                    warmup_steps=max_iterations//10),
+            },
+            "camera_opt": {
+                # "mode"="off",
+                "optimizer": AdamOptimizerConfig(lr=6e-6, eps=1e-15),
+                "scheduler": ExponentialDecaySchedulerConfig(lr_final=6e-4, max_steps=250000)
+            },
+        },
+        vis="viewer+wandb",
+    )
+
+    name = f"boston-seaport-camera-dino-c{i}"
+    method_configs[name] = TrainerConfig(
+        output_dir=Path("./outputs"),
+        experiment_name="boston-seaport-camera",
+        method_name=name,
+        max_num_iterations=max_iterations,
+        pipeline=MyPipelineConfig(
+            datamanager=MyDataManagerConfig(
+                dataparser=MyNuScenesMSDataParserConfig(
+                    location="boston-seaport",
+                    centroid_name=str(i),
+                    num_aabbs=16,
+                    use_gt_masks=False,
+                    data_dir=data_root,
+                ),
+                train_num_rays_per_batch=8192*bs_scale,
+            ),
+            model=NerfactoNuscMSModelConfig(
+                near_plane=0.1*pose_rescale_factor,
+                far_plane=1000.0*pose_rescale_factor,
+                piecewise_sampler_threshold=100.0*pose_rescale_factor,
+                proposal_weights_anneal_max_num_iters=max_iterations//10,
+                proposal_warmup=max_iterations//10,
+                use_lidar_loss=False,
+                camera_optimizer=CameraOptimizerConfig(mode="off"),
+            ),
+        ),
+        optimizers={
+            "proposal_networks": {
+                "optimizer": AdamOptimizerConfig(lr=1e-2, eps=1e-15, weight_decay=1e-5),
+                "scheduler": WarmupMultiStepSchedulerConfig(max_steps=max_iterations, 
+                    milestones=[max_iterations//4, max_iterations//2, max_iterations*3//4], 
+                    warmup_steps=max_iterations//10),
+            },
+            "fields": {
+                "optimizer": AdamOptimizerConfig(lr=1e-2, eps=1e-15, weight_decay=1e-5),
+                "scheduler": WarmupMultiStepSchedulerConfig(max_steps=max_iterations, 
+                    milestones=[max_iterations//4, max_iterations//2, max_iterations*3//4], 
+                    warmup_steps=max_iterations//10),
+            },
+            "camera_opt": {
+                # "mode"="off",
+                "optimizer": AdamOptimizerConfig(lr=6e-6, eps=1e-15),
+                "scheduler": ExponentialDecaySchedulerConfig(lr_final=6e-4, max_steps=250000)
+            },
+        },
+        vis="viewer+wandb",
+    )
 
 for i in range(4):
     name = f"singapore-onenorth-monodepth-dino-c{i}"
