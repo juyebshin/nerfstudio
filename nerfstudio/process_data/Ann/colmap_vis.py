@@ -74,6 +74,7 @@ def main(
         )
         points = points[points_selection]
         colors = colors[points_selection]
+        points -= points.mean(0)
 
         server.add_point_cloud(
             name="/colmap/pcd",
@@ -132,18 +133,6 @@ def main(
                 image=image,
             )
             attach_callback(frustum, frame)
-
-        for client in server.get_clients().values():
-            # print(client.camera.position)
-            client.camera.position = points.mean(0) + onp.array([0.0, 0.0, 1000.0])
-            client.camera.look_at = points.mean(0)
-        server.add_frame(
-            f"/mean_frame",
-            wxyz=server.world_axes.wxyz,
-            position=points.mean(0),
-            axes_length=3.0,
-            axes_radius=0.00,
-        )
 
     need_update = True
 
