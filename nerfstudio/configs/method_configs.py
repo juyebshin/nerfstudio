@@ -673,11 +673,21 @@ for i in range(4):
             datamanager=NuscFullImageDatamanagerConfig(
                 dataparser=NuscDataParserConfig(
                     location="singapore-onenorth",
+                    scale_factor=pose_rescale_factor,
                     centroid_name=str(i),
+                    auto_scale_poses=False,
                     load_3D_points=True),
             ),
             model=SplatfactoNuscModelConfig(
-                # collider_params={"near_plane": 0.1, "far_plane": 1000},
+                refine_every=1000,
+                background_color='black',
+                # collider_params={"near_plane": 0.1*pose_rescale_factor, "far_plane": 1000*pose_rescale_factor},
+                # cull_alpha_thresh=0.005, # to debug
+                # continue_cull_post_densification=False,
+                # densify_grad_thresh=0.0005,
+                stop_screen_size_at=max_iterations//10,
+                stop_split_at=max_iterations//2,
+                use_scale_regularization=True,
                 ),
         ),
         optimizers={
@@ -710,8 +720,8 @@ for i in range(4):
                 "scheduler": ExponentialDecaySchedulerConfig(lr_final=5e-5, max_steps=max_iterations), # to debug
             },
         },
-        viewer=ViewerConfig(num_rays_per_chunk=1 << 15),
-        vis="viewer",
+        viewer=ViewerConfig(num_rays_per_chunk=1 << 15), # 32768
+        vis="viewer+wandb",
     )
 
 for i in range(8):

@@ -216,7 +216,7 @@
       "program": "nerfstudio/scripts/train.py",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "env": { "CUDA_VISIBLE_DEVICES": "0" },
+      "env": { "CUDA_VISIBLE_DEVICES": "5" },
       "args": [
         "singapore-onenorth-splat-c0",
         // "--vis=viewer+tensorboard",

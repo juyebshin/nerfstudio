@@ -44,6 +44,10 @@ from nerfstudio.models.base_model import Model, ModelConfig
 from nerfstudio.utils.colors import get_color
 from nerfstudio.utils.rich_utils import CONSOLE
 
+# cuDNN error handler
+# from torch.backends import cudnn
+# cudnn.enabled=False
+
 
 def random_quat_tensor(N):
     """
@@ -115,11 +119,11 @@ class SplatfactoNuscModelConfig(ModelConfig):
     """Whether to randomize the background color."""
     num_downscales: int = 0
     """at the beginning, resolution is 1/2^d, where d is this number"""
-    cull_alpha_thresh: float = 0.1
+    cull_alpha_thresh: float = 0.1 # 0.1 default
     """threshold of opacity for culling gaussians. One can set it to a lower value (e.g. 0.005) for higher quality."""
     cull_scale_thresh: float = 0.5
     """threshold of scale for culling huge gaussians"""
-    continue_cull_post_densification: bool = True
+    continue_cull_post_densification: bool = True # True default
     """If True, continue to cull gaussians post refinement"""
     reset_alpha_every: int = 30
     """Every this many refinement steps, reset the alpha"""
@@ -149,7 +153,7 @@ class SplatfactoNuscModelConfig(ModelConfig):
     """stop splitting at this step"""
     sh_degree: int = 3
     """maximum degree of spherical harmonics to use"""
-    use_scale_regularization: bool = False
+    use_scale_regularization: bool = False # False default
     """If enabled, a scale regularization introduced in PhysGauss (https://xpandora.github.io/PhysGaussian/) is used for reducing huge spikey gaussians."""
     max_gauss_ratio: float = 10.0
     """threshold of ratio of gaussian max to min scale before applying regularization
@@ -668,7 +672,7 @@ class SplatfactoNuscModel(Model):
                 return {"rgb": background.repeat(int(camera.height.item()), int(camera.width.item()), 1)}
         else:
             crop_ids = None
-        camera_downscale = self._get_downscale_factor()
+        camera_downscale = self._get_downscale_factor() # this always equals to 1?
         camera.rescale_output_resolution(1 / camera_downscale)
         # shift the camera to center of scene looking at center
         R = camera.camera_to_worlds[0, :3, :3]  # 3 x 3

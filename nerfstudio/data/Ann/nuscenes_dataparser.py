@@ -51,17 +51,17 @@ class NuscDataParserConfig(DataParserConfig):
     """Name of centroid"""
     location: str = "singapore-onenorth"
     """Name of location"""
-    scale_factor: float = 1.0
+    scale_factor: float = 1.0 # to debug
     """How much to scale the camera origins by."""
     downscale_factor: Optional[int] = None
     """How much to downscale images. If not set, images are chosen such that the max dimension is <1600px."""
     scene_scale: float = 1.0
     """How much to scale the region of interest by."""
-    orientation_method: Literal["pca", "up", "vertical", "none"] = "up"
+    orientation_method: Literal["pca", "up", "vertical", "none"] = "up" # to debug
     """The method to use for orientation."""
     center_method: Literal["poses", "focus", "none"] = "poses"
     """The method to use to center the poses."""
-    auto_scale_poses: bool = True
+    auto_scale_poses: bool = False # to debug
     """Whether to automatically scale the poses to fit in +/- 1 bounding box."""
     eval_mode: Literal["fraction", "filename", "interval", "all"] = "fraction"
     """
@@ -71,7 +71,7 @@ class NuscDataParserConfig(DataParserConfig):
     Interval uses every nth frame for eval.
     All uses all the images for any split.
     """
-    train_split_fraction: float = 0.9
+    train_split_fraction: float = 1.0 # PreSight: 1.0
     """The percentage of the dataset to use for training. Only used when eval_mode is train-split-fraction."""
     eval_interval: int = 8
     """The interval between frames to use for eval. Only used when eval_mode is eval-interval."""
@@ -90,6 +90,23 @@ class Nusc(DataParser):
 
     def _generate_dataparser_outputs(self, split="train"):
         assert self.config.data.exists(), f"Data directory {self.config.data} does not exist."
+
+        transform1 = torch.tensor(
+            [
+                [0, -1, 0, 0],
+                [0, 0, -1, 0],
+                [1, 0, 0, 0],
+                [0, 0, 0, 1],
+            ], dtype=torch.float32
+        )
+        transform2 = torch.tensor(
+            [
+                [0, 0, 1, 0],
+                [0, 1, 0, 0],
+                [-1, 0, 0, 0],
+                [0, 0, 0, 1],
+            ], dtype=torch.float32
+        )
 
         if self.config.data.suffix == ".json":
             meta = load_from_json(self.config.data)
